@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Validation — Try Not to Laugh</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap');
+  :root {
+    --bg: #0a0a0f; --surface: #111118; --surface2: #16161f; --border: #22222e;
+    --purple: #9147ff; --green: #00f593; --red: #ff4444; --amber: #ffb347; --blue: #4fa3ff;
+    --text: #e8e8f0; --muted: #6b6b80;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; min-height: 100vh; }
+
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; }
+  header h1 { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 900; color: var(--purple); }
+  .badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; }
+  .badge-pending { background: #2a1f00; color: var(--amber); border: 1px solid #4a3800; }
+  .badge-live { background: #0a1f0a; color: var(--green); border: 1px solid #0d3d0d; }
+  .badge-live::before { content: '● '; animation: blink 1.2s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .conn-dot.ok { background: var(--green); }
+
+  .config-bar { background: var(--surface2); border-bottom: 1px solid var(--border); padding: 8px 24px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .config-bar input { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 6px 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; outline: none; }
+  .config-bar input:focus { border-color: var(--purple); }
+  .config-bar label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .btn-sm { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; padding: 6px 14px; border: none; border-radius: 5px; cursor: pointer; background: var(--purple); color: #fff; transition: background .15s; white-space: nowrap; }
+  .btn-sm:hover { background: #7c3bd9; }
+
+  main { padding: 20px 24px; max-width: 1280px; margin: 0 auto; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 4px; width: fit-content; }
+  .tab { padding: 7px 16px; border-radius: 5px; font-size: 12px; cursor: pointer; color: var(--muted); transition: all .15s; border: none; background: transparent; font-family: 'JetBrains Mono', monospace; }
+  .tab.active { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+
+  .video-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: border-color .2s; animation: fadeIn .25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .video-card:hover { border-color: #33334a; }
+  .video-card.approved { border-color: #1a4a1a; }
+  .video-card.rejected { opacity: .45; }
+
+  .thumb-wrap { position: relative; width: 100%; padding-top: 56.25%; background: #000; cursor: pointer; }
+  .thumb-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity .2s; }
+  .thumb-wrap:hover img { opacity: .7; }
+  .play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 36px; opacity: 0; transition: opacity .2s; }
+  .thumb-wrap:hover .play-overlay { opacity: 1; }
+  .preview-iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+
+  .card-body { padding: 11px 13px; }
+  .card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .card-user { font-size: 12px; color: var(--blue); }
+  .card-time { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .status-chip { font-size: 10px; padding: 2px 7px; border-radius: 20px; }
+  .chip-pending  { background: #2a1f00; color: var(--amber); }
+  .chip-approved { background: #0a1f0a; color: var(--green); }
+  .chip-rejected { background: #1f0a0a; color: var(--red); }
+  .chip-played   { background: #1a1a2a; color: var(--muted); }
+  .card-url { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 10px; }
+  .card-url a { color: var(--muted); text-decoration: none; }
+  .card-url a:hover { color: var(--text); }
+  .card-actions { display: flex; gap: 7px; }
+  .btn-approve { flex: 1; padding: 8px; background: #0a1f0a; color: var(--green); border: 1px solid #1a4a1a; border-radius: 6px; cursor: pointer; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; transition: all .15s; }
+  .btn-approve:hover:not(:disabled) { background: var(--green); color: #000; }
+  .btn-approve:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-reject  { flex: 1; padding: 8px; background: #1f0a0a; color: var(--red); border: 1px solid #4a1a1a; border-radius: 6px; cursor: pointer; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; transition: all .15s; }
+  .btn-reject:hover:not(:disabled) { background: var(--red); color: #fff; }
+  .btn-reject:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-eye { padding: 8px 10px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 14px; transition: all .15s; }
+  .btn-eye:hover { color: var(--text); }
+
+  .empty { text-align: center; padding: 70px 20px; color: var(--muted); grid-column: 1/-1; }
+  .empty .ico { font-size: 44px; margin-bottom: 10px; }
+  .empty p { font-size: 13px; }
+
+  .notif { position: fixed; bottom: 20px; right: 20px; padding: 11px 16px; border-radius: 8px; font-size: 13px; opacity: 0; transform: translateY(8px); transition: all .3s; pointer-events: none; z-index: 999; background: var(--surface); border: 1px solid var(--border); }
+  .notif.show { opacity: 1; transform: none; }
+  .notif.ok { border-color: var(--green); color: var(--green); }
+  .notif.ko { border-color: var(--red); color: var(--red); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎬 Validation Queue</h1>
+  <span class="badge badge-pending" id="badge-count">0 en attente</span>
+  <span class="badge badge-live" id="badge-live" style="display:none">Realtime</span>
+  <div class="header-right">
+    <span class="conn-dot" id="conn-dot"></span>
+    <span id="conn-label" style="font-size:11px;color:var(--muted)">Non connecté</span>
+  </div>
+</header>
+
+<div class="config-bar">
+  <label>Supabase URL :</label>
+  <input type="text" id="sb-url" placeholder="https://xxxx.supabase.co" style="width:280px" oninput="saveCfg()">
+  <label>Anon Key :</label>
+  <input type="text" id="sb-key" placeholder="eyJ..." style="width:200px" oninput="saveCfg()">
+  <button class="btn-sm" onclick="connect()">Connecter</button>
+  <button class="btn-sm" onclick="clearPlayed()" style="background:#1a1a1a;border:1px solid var(--border);color:var(--muted)">Vider jouées</button>
+</div>
+
+<main>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('pending',this)">En attente</button>
+    <button class="tab" onclick="switchTab('approved',this)">Approuvées</button>
+    <button class="tab" onclick="switchTab('rejected',this)">Refusées</button>
+    <button class="tab" onclick="switchTab('all',this)">Toutes</button>
+  </div>
+  <div class="grid" id="grid">
+    <div class="empty"><div class="ico">🔷</div><p>Configure Supabase pour commencer</p></div>
+  </div>
+</main>
+
+<div class="notif" id="notif"></div>
+
+<script>
+let sbUrl = '', sbKey = '', currentTab = 'pending', allVideos = {}, pollInterval = null;
+
+const cfg = JSON.parse(localStorage.getItem('tnl-val-cfg') || '{}');
+if (cfg.url) { document.getElementById('sb-url').value = cfg.url; sbUrl = cfg.url; }
+if (cfg.key) { document.getElementById('sb-key').value = cfg.key; sbKey = cfg.key; }
+if (cfg.url && cfg.key) connect();
+
+window.saveCfg = () => localStorage.setItem('tnl-val-cfg', JSON.stringify({
+  url: document.getElementById('sb-url').value.trim(),
+  key: document.getElementById('sb-key').value.trim()
+}));
+
+window.connect = function() {
+  sbUrl = document.getElementById('sb-url').value.trim().replace(/\/$/, '');
+  sbKey = document.getElementById('sb-key').value.trim();
+  if (!sbUrl || !sbKey) return;
+  saveCfg();
+  if (pollInterval) clearInterval(pollInterval);
+  fetchAll();
+  // Poll every 3 seconds for real-time feel (Supabase Realtime requires their JS SDK;
+  // this lightweight polling avoids a 300kb dependency)
+  pollInterval = setInterval(fetchAll, 3000);
+  document.getElementById('badge-live').style.display = 'inline';
+  document.getElementById('conn-dot').className = 'conn-dot ok';
+  document.getElementById('conn-label').textContent = 'Connecté';
+  document.getElementById('conn-label').style.color = 'var(--green)';
+};
+
+async function fetchAll() {
+  try {
+    const r = await fetch(`${sbUrl}/rest/v1/queue?select=*&order=created_at.asc`, {
+      headers: { apikey: sbKey, Authorization: 'Bearer ' + sbKey }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const rows = await r.json();
+    const prev = JSON.stringify(allVideos);
+    allVideos = {};
+    rows.forEach(v => allVideos[v.id] = v);
+    if (JSON.stringify(allVideos) !== prev) renderGrid();
+    const pending = rows.filter(v => v.status === 'pending').length;
+    document.getElementById('badge-count').textContent = pending + ' en attente';
+  } catch(e) {
+    document.getElementById('conn-label').textContent = 'Erreur: ' + e.message;
+    document.getElementById('conn-label').style.color = 'var(--red)';
+  }
+}
+
+window.switchTab = function(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderGrid();
+};
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  let videos = Object.values(allVideos);
+  if (currentTab !== 'all') videos = videos.filter(v => v.status === currentTab);
+  videos.reverse();
+  if (!videos.length) {
+    const labels = { pending: '✅ Aucune vidéo en attente', approved: '(vide)', rejected: '(vide)', all: 'Aucune vidéo' };
+    grid.innerHTML = `<div class="empty"><div class="ico">${currentTab==='pending'?'🎉':'📭'}</div><p>${labels[currentTab]||'(vide)'}</p></div>`;
+    return;
+  }
+  grid.innerHTML = videos.map(v => cardHTML(v)).join('');
+}
+
+function cardHTML(v) {
+  const thumb = `https://img.youtube.com/vi/${v.video_id}/mqdefault.jpg`;
+  const url = `https://www.youtube.com/watch?v=${v.video_id}`;
+  const time = v.created_at ? new Date(v.created_at).toLocaleTimeString('fr-CA',{hour12:false,hour:'2-digit',minute:'2-digit'}) : '—';
+  const chips = { pending: ['chip-pending','En attente'], approved: ['chip-approved','✓ Approuvée'], rejected: ['chip-rejected','✗ Refusée'], played: ['chip-played','Jouée'] };
+  const [chipClass, chipLabel] = chips[v.status] || ['chip-pending', v.status];
+  return `<div class="video-card ${v.status}" id="card-${v.id}">
+    <div class="thumb-wrap" id="tw-${v.id}" onclick="togglePreview('${v.id}','${v.video_id}')">
+      <img src="${thumb}" alt="" loading="lazy">
+      <div class="play-overlay">▶</div>
+    </div>
+    <div class="card-body">
+      <div class="card-meta">
+        <span class="card-user">@${v.submitted_by||'?'}</span>
+        <span class="status-chip ${chipClass}">${chipLabel}</span>
+        <span class="card-time">${time}</span>
+      </div>
+      <div class="card-url"><a href="${url}" target="_blank">${url}</a></div>
+      <div class="card-actions">
+        <button class="btn-eye" onclick="togglePreview('${v.id}','${v.video_id}')" title="Aperçu">👁</button>
+        <button class="btn-approve" onclick="setStatus('${v.id}','approved')" ${v.status==='approved'||v.status==='played'?'disabled':''}>✓ Approuver</button>
+        <button class="btn-reject"  onclick="setStatus('${v.id}','rejected')"  ${v.status==='rejected'?'disabled':''}>✗ Refuser</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+window.togglePreview = function(id, videoId) {
+  const wrap = document.getElementById('tw-' + id);
+  const existing = wrap.querySelector('iframe');
+  if (existing) { existing.remove(); return; }
+  const iframe = document.createElement('iframe');
+  iframe.className = 'preview-iframe';
+  iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+  iframe.allow = 'autoplay; encrypted-media';
+  wrap.appendChild(iframe);
+};
+
+window.setStatus = async function(id, status) {
+  if (!sbUrl) return;
+  try {
+    const r = await fetch(`${sbUrl}/rest/v1/queue?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { apikey: sbKey, Authorization: 'Bearer ' + sbKey, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ status })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    showNotif(status === 'approved' ? '✓ Approuvée — apparaîtra dans le stream' : '✗ Refusée', status === 'approved' ? 'ok' : 'ko');
+    await fetchAll();
+  } catch(e) { showNotif('Erreur: ' + e.message, 'ko'); }
+};
+
+window.clearPlayed = async function() {
+  if (!sbUrl || !confirm('Supprimer toutes les vidéos jouées ?')) return;
+  await fetch(`${sbUrl}/rest/v1/queue?status=eq.played`, {
+    method: 'DELETE',
+    headers: { apikey: sbKey, Authorization: 'Bearer ' + sbKey }
+  });
+  await fetchAll();
+};
+
+function showNotif(msg, type) {
+  const el = document.getElementById('notif');
+  el.textContent = msg; el.className = 'notif ' + type + ' show';
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
